@@ -5,7 +5,7 @@ app = FastAPI()
 
 @app.get("/")
 async def root():
-    return {"message": "Hello World"}
+    return {"message": "Hello Notion!"}
 
 @app.post("/webhook/notion")
 async def notion_webhook(request: Request):
