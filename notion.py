@@ -1,0 +1,120 @@
+import os
+from dotenv import load_dotenv
+from notion_client import Client
+
+load_dotenv()
+
+NOTION_TOKEN = os.getenv("NOTION_TOKEN")
+DATABASE_ID = os.getenv("DATABASE_ID")
+DATA_SOURCE_ID = os.getenv("DATA_SOURCE_ID")
+
+notion = Client(auth=NOTION_TOKEN)
+    
+def add_video(page_id, youtube_url):
+    #ดึง children ทั้งหมดในเพจ (จะเจอ column_list)
+    blocks = notion.blocks.children.list(block_id=page_id)
+    
+    target_column_id = None
+
+    for block in blocks.get("results", []):
+        # หาcolumn_list
+        if block.get("type") == "column_list":
+            #ดึง columns ทั้งหมดภายใน column_list นั้น
+            columns = notion.blocks.children.list(block_id=block["id"])
+            
+            for column in columns.get("results", []):
+                #ดึง content ข้างในแต่ละ column เพื่อตรวจสอบ
+                col_children = notion.blocks.children.list(block_id=column["id"])
+                
+                for child in col_children.get("results", []):
+                    #เช็กว่าเป็น heading 2 และมีคำว่า Video
+                    if child.get("type") == "heading_2":
+                        texts = child["heading_2"].get("rich_text", [])
+                        plain_text = "".join([t.get("plain_text", "") for t in texts])
+                        
+                        if "Video" in plain_text:
+                            target_column_id = column["id"]
+                            break
+                
+                if target_column_id:
+                    break
+        if target_column_id:
+            break
+
+    #Append วิดีโอเข้าไปใน Column นั้น
+    if target_column_id:
+        notion.blocks.children.append(
+            block_id=target_column_id,
+            children=[
+                {
+                    "object": "block",
+                    "type": "video",
+                    "video": {
+                        "type": "external",
+                        "external": {
+                            "url": youtube_url
+                        }
+                    }
+                }
+            ]
+        )
+    else:
+        print("ไม่พบ Column '🎬 Video' - เพิ่มวิดีโอต่อท้ายเพจแทน")
+        notion.blocks.children.append(
+            block_id=page_id,
+            children=[
+                {
+                    "object": "block",
+                    "type": "video",
+                    "video": {
+                        "type": "external",
+                        "external": {
+                            "url": youtube_url
+                        }
+                    }
+                }
+            ]
+        )
+
+def process_page(page):
+    properties = page["properties"]
+    youtube_url = properties["YouTube"]["url"]
+    video_added = properties["Video Added"]["checkbox"]
+    
+    if youtube_url and not video_added:
+
+        print(f"Adding video: {youtube_url}")
+
+        add_video(
+            page["id"],
+            youtube_url
+        )
+
+        notion.pages.update(
+            page_id=page["id"],
+            properties={
+                "Video Added": {
+                    "checkbox": True
+                }
+            }
+        )
+
+        print("Video added!")
+    
+
+def main():
+    response = notion.data_sources.query(
+        data_source_id=DATA_SOURCE_ID
+    )
+    if response["results"].__len__() == 0:
+        print("No results in database")
+        return
+        
+    for page in response["results"]:
+        process_page(page)
+        
+
+
+if __name__ == "__main__":
+    main()
+    
