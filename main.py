@@ -10,31 +10,32 @@ async def root():
 @app.post("/webhook/notion")
 async def notion_webhook(request: Request):
 
-    payload = await request.json()
+    # payload = await request.json()
+    body = await request.body()
 
     print("Received webhook:")
-    print(payload)
+    print(body)
 
-    # Verification request
-    if "verification_token" in payload:
-        print("Verification token:")
-        print(payload["verification_token"])
+    # # Verification request
+    # if "verification_token" in payload:
+    #     print("Verification token:")
+    #     print(payload["verification_token"])
 
-        return {"ok": True}
+    #     return {"ok": True}
 
-    # Normal event
-    event_type = payload.get("type")
+    # # Normal event
+    # event_type = payload.get("type")
 
-    if event_type == "page.properties_updated":
+    # if event_type == "page.properties_updated":
 
-        page_id = payload["entity"]["id"]
+    #     page_id = payload["entity"]["id"]
 
-        print(f"Page updated: {page_id}")
+    #     print(f"Page updated: {page_id}")
 
-        page = notion.pages.retrieve(
-            page_id=page_id
-        )
+    #     page = notion.pages.retrieve(
+    #         page_id=page_id
+    #     )
 
-        process_page(page)
+    #     process_page(page)
 
     return {"ok": True}
