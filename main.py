@@ -14,7 +14,7 @@ async def notion_webhook(request: Request):
     body = await request.body()
 
     print("Received webhook:")
-    print(body)
+    print(body.decode())
 
     # # Verification request
     # if "verification_token" in payload:
